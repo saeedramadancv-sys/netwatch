@@ -1,0 +1,55 @@
+# Render Blueprint — deploy with: Render dashboard → New → Blueprint → this repo.
+#
+# Deliberate choices for the free tier:
+#
+# - SQLite, not SQL Server: Render's free plan has no SQL Server and no persistent
+#   disk, so the database lives on the instance's ephemeral filesystem. History
+#   resets on each deploy or restart — fine for a demo, and the seeder recreates
+#   the sample devices on boot. Attaching a paid disk (mounted at /app/data) makes
+#   it persistent with no code change.
+#
+# - Secrets are sync:false, never committed: Render prompts for them once at the
+#   first deploy. The application refuses to boot without Jwt__SigningKey and
+#   refuses to create an admin without Seed__AdminPassword, so forgetting them
+#   fails loudly instead of deploying something open.
+#
+# - ICMP probes cannot work here (containers get no NET_RAW capability), and the
+#   seeded "Default Gateway" device points at a LAN that does not exist in the
+#   cloud. Both degrade gracefully — the executor reports "ICMP is not permitted"
+#   and the dashboard shows the failure honestly. Delete those seeded probes after
+#   the first boot and monitor public targets with TCP/HTTP probes instead.
+services:
+  - type: web
+    name: netwatch
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      - key: Database__Provider
+        value: Sqlite
+
+      - key: ConnectionStrings__Default
+        value: Data Source=/app/data/netwatch.db
+
+      # At least 32 characters. Generate one locally with:  openssl rand -base64 48
+      - key: Jwt__SigningKey
+        sync: false
+
+      - key: Seed__AdminEmail
+        value: admin@netwatch.local
+
+      # The password you will sign in with. Identity enforces: 8+ chars with
+      # upper, lower and a digit.
+      - key: Seed__AdminPassword
+        sync: false
+
+      # Gentler than the local defaults: this is a shared free instance, and a
+      # sleeping service that wakes into a burst of overdue checks should ramp up
+      # quietly.
+      - key: Monitoring__MaxConcurrentChecks
+        value: "5"
+      - key: Monitoring__TickSeconds
+        value: "10"
