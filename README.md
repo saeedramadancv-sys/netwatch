@@ -1,5 +1,8 @@
 # NetWatch — Network & Service Availability Monitoring
 
+**Live demo:** https://netwatch-rbmr.onrender.com — free tier, so the first visit
+after idle takes ~30s to wake. Ask for credentials, or run it locally in two commands.
+
 A self-hosted monitoring system: register devices (routers, servers, websites), attach
 probes (ICMP ping, TCP connect, HTTP), and watch live health, latency charts, uptime
 statistics and incident history on a real-time dashboard — in English or Arabic.
