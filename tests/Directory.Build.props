@@ -1,0 +1,17 @@
+<Project>
+
+  <!-- Inherit everything from the solution-level props, then relax what only applies to tests. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      CA1707 bans underscores in member names. Test methods are the one place the
+      convention is inverted: Scenario_ExpectedOutcome is the standard xUnit naming style
+      and reads far better in a failure report than a run-on PascalCase sentence.
+    -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,29 @@
+<Project>
+
+  <!--
+    Settings shared by every project in the solution. Keeping them here means a new
+    project picks up the same language level and analysis rules automatically.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      CA1848 pushes every log call through a source-generated LoggerMessage delegate to
+      avoid boxing and format-string parsing. That trade is worth it on a per-request hot
+      path; here the entire application logs on state changes and background sweeps -
+      single-digit lines per minute - so the readability cost outweighs the allocation
+      saving. Disabled deliberately rather than left to accumulate as noise.
+    -->
+    <NoWarn>$(NoWarn);CA1848</NoWarn>
+  </PropertyGroup>
+
+</Project>
