@@ -1,0 +1,28 @@
+# Everything the build stages produce themselves. Leaving these out keeps the build
+# context small and, more importantly, stops a stale local bin/ or node_modules/ from
+# leaking into the image and masking a broken build.
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.angular/
+
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+tests/
+docs/
+README.md
+LICENSE
+
+**/appsettings.Development.json
+**/appsettings.*.Local.json
+.env
+.env.*

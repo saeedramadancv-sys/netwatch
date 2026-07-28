@@ -21,7 +21,17 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // SignalR is the transport for live updates; the Application layer only knows the
 // IMonitoringNotifier contract, which this binds to the hub.
-builder.Services.AddSignalR();
+builder.Services
+    .AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        // SignalR serialises with its own options, entirely separate from MVC's. Without
+        // this, controllers would send "Down" while the hub sent 3 for the same enum, and
+        // a client applying a live update would poison its own state with a value that
+        // does not match anything the REST API ever returns.
+        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
 builder.Services.AddScoped<IMonitoringNotifier, SignalRMonitoringNotifier>();
 
 builder.Services.AddJwtAuthentication();

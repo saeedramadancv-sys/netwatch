@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch cancels the previous run: there is no value in
+# finishing CI for a commit that has already been superseded.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "9.0.x"
+  NODE_VERSION: "22"
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  backend:
+    name: Backend build and tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore NetWatch.sln
+
+      # Warnings are errors in CI only. Locally they stay visible without blocking
+      # an in-progress edit; on main nothing merges with an unaddressed warning.
+      - name: Build
+        run: dotnet build NetWatch.sln --configuration Release --no-restore -warnaserror
+
+      - name: Test
+        run: >
+          dotnet test NetWatch.sln
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./artifacts/test-results
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./artifacts/test-results
+          retention-days: 7
+
+  migrations:
+    name: Migrations match the model
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install EF tools
+        run: dotnet tool install --global dotnet-ef --version 9.0.0
+
+      # Catches the classic mistake of changing an entity and forgetting to scaffold
+      # the migration. `migrations has-pending-model-changes` exits non-zero when the
+      # snapshot no longer matches the model - for each provider independently, since
+      # they carry separate migration sets.
+      - name: Check SQLite migrations are current
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --project src/NetWatch.Migrations.Sqlite
+          --startup-project src/NetWatch.Migrations.Sqlite
+          --context AppDbContext
+
+      - name: Check SQL Server migrations are current
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --project src/NetWatch.Migrations.SqlServer
+          --startup-project src/NetWatch.Migrations.SqlServer
+          --context AppDbContext
+
+  frontend:
+    name: Frontend build and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client/netwatch-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/netwatch-web/package-lock.json
+
+      # `npm ci` rather than `npm install`: it installs exactly what the lockfile
+      # says and fails if the lockfile and package.json disagree.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm run test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Build
+        run: npm run build -- --configuration production
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built but not pushed: this job proves the Dockerfile is valid and the
+      # multi-stage build succeeds. Publishing belongs to a release workflow with
+      # registry credentials.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: netwatch:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
