@@ -26,7 +26,7 @@ permissions:
   id-token: write
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  # SDK version comes from global.json.
   IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          global-json-file: global.json
 
       # Deploying a revision that has not passed its own tests defeats the point of
       # having them, so this gate runs again here rather than trusting the CI run.

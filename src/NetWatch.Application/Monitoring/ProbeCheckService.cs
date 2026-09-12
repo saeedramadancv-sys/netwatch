@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NetWatch.Application.Common.Interfaces;
 using NetWatch.Domain.Entities;
 using NetWatch.Domain.Enums;
@@ -53,7 +53,10 @@ public class ProbeCheckService(
 
         await NotifyAsync(probe, transition, outcome, execution.ResponseTimeMs, checkedAt, incident, cancellationToken);
 
-        if (transition.IsNoteworthy)
+        // Describe() builds a string and the enum arguments box, both on the hot path:
+        // this runs for every probe on every tick. Guarding means none of that is paid
+        // when Information is not enabled.
+        if (transition.IsNoteworthy && logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation(
                 "Probe {ProbeId} ({Target}) moved {From} -> {To} after {Outcome}.",

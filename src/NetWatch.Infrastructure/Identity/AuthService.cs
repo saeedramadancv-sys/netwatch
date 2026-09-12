@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NetWatch.Application.Auth;
@@ -83,7 +83,10 @@ public class AuthService(
         }
 
         await userManager.AddToRoleAsync(user, role);
-        logger.LogInformation("Registered user {UserId} with role {Role}.", user.Id, role);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Registered user {UserId} with role {Role}.", user.Id, role);
+        }
 
         return await IssueAsync(user, ipAddress, cancellationToken);
     }
