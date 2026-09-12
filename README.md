@@ -97,6 +97,58 @@ dotnet test                                    # 114 backend tests
 cd client/netwatch-web && npm test             # 19 client tests
 ```
 
+## Caching
+
+The dashboard summary is the most expensive read in the application — four repository
+round trips, one an aggregate over the whole probe-result table — and every open
+dashboard asks for it on an interval.
+
+It is also the one read where a stale answer is a **correctness** bug: a monitoring wall
+showing "all up" thirty seconds into an outage is worse than no wall. So the entry is not
+left to a TTL. `CacheInvalidatingMonitoringNotifier` retires it the moment a probe changes
+state or an incident opens or resolves; the TTL is only a backstop for a lost
+invalidation. Checks that change nothing — the overwhelming majority, since every probe
+reports on every tick — deliberately leave the cache alone.
+
+Invalidation rotates a version token folded into the cache key rather than deleting keys.
+`IDistributedCache` has no wildcard delete, and scanning Redis for matching keys is the
+operation the Redis docs warn against in production; rotating is one O(1) write no matter
+how many windows are cached.
+
+Redis is opt-in by connection string:
+
+```bash
+# Without this, an in-process distributed cache is registered instead — a fresh clone
+# and the test host need no broker installed.
+ConnectionStrings__Redis="localhost:6379"
+```
+
+`docker-compose.yml` and the Azure template both wire it up. A single-instance deployment
+is served correctly by the in-process fallback; it only stops being adequate once a
+second replica exists, at which point each would cache separately.
+
+## Deploy to Azure
+
+`infra/main.bicep` provisions App Service (Linux container), Azure Cache for Redis and
+Azure SQL, and wires the connection strings into the app settings. The
+`Deploy to Azure` workflow runs the tests, pushes the image to GHCR and applies the
+template.
+
+```bash
+az group create --name netwatch-rg --location westeurope
+az deployment group create   --resource-group netwatch-rg   --template-file infra/main.bicep   --parameters appName=<globally-unique-name>                sqlAdminLogin=<login>                sqlAdminPassword=<password>                jwtSigningKey=<base64-key>
+```
+
+The workflow authenticates with OIDC, so no publish profile or service-principal secret
+is stored in the repository. It needs `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
+`AZURE_SUBSCRIPTION_ID`, `SQL_ADMIN_LOGIN`, `SQL_ADMIN_PASSWORD` and `JWT_SIGNING_KEY`
+as repository secrets, and deployment is `workflow_dispatch` only — a monitoring system
+that redeploys itself on every push to main goes blind during each rollout.
+
+The App Service plan is B1 rather than the free tier because the monitoring
+`BackgroundService` needs `alwaysOn`: on a tier that idles the worker out, checks stop
+running whenever nobody has the dashboard open.
+
 ## Run it with Docker
 
 ```bash
@@ -130,6 +182,8 @@ reject anyway.
 | Refresh-stampede guard on the client | `client/.../auth.interceptor.ts` |
 | Per-provider migrations & drift check in CI | `NetWatch.Migrations.*` + `.github/workflows/ci.yml` |
 | p95 vs average, and why a dashboard needs both | `Application/Monitoring/LatencyStatistics.cs` |
+| Event-driven cache invalidation, and why TTL alone is wrong here | `Application/Dashboard/CachedDashboardService.cs` |
+| Cache failures degrade latency, never availability | `Infrastructure/Caching/DistributedCacheService.cs` |
 | RTL via logical properties, LTR-pinned hostnames | `client/.../styles.scss`, `i18n.service.ts` |
 
 ## Known trade-offs

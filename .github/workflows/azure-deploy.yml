@@ -1,0 +1,120 @@
+name: Deploy to Azure
+
+# Manual only. A monitoring system that redeploys itself on every push to main goes
+# blind during each rollout, so promotion is an explicit decision.
+on:
+  workflow_dispatch:
+    inputs:
+      resourceGroup:
+        description: "Target resource group"
+        required: true
+        default: "netwatch-rg"
+      appName:
+        description: "Web app name (must be globally unique)"
+        required: true
+        default: "netwatch-app"
+
+concurrency:
+  group: azure-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  # Required by azure/login for OIDC: the workflow exchanges this token for Azure
+  # credentials, so no publish profile or service-principal secret is stored here.
+  id-token: write
+
+env:
+  DOTNET_VERSION: "9.0.x"
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  verify:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Deploying a revision that has not passed its own tests defeats the point of
+      # having them, so this gate runs again here rather than trusting the CI run.
+      - name: Test
+        run: dotnet test NetWatch.sln --configuration Release
+
+  publish-image:
+    name: Build and push container
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tag
+        id: meta
+        run: echo "image=${IMAGE,,}:${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Provision and deploy
+    needs: publish-image
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Idempotent: the same template applied twice converges rather than duplicating
+      # resources, so this runs on every deployment instead of being a one-off setup step.
+      - name: Deploy infrastructure
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ inputs.resourceGroup }}
+          template: ./infra/main.bicep
+          parameters: >
+            appName=${{ inputs.appName }}
+            containerImage=${{ needs.publish-image.outputs.image }}
+            sqlAdminLogin=${{ secrets.SQL_ADMIN_LOGIN }}
+            sqlAdminPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
+            jwtSigningKey=${{ secrets.JWT_SIGNING_KEY }}
+
+      - name: Verify the deployment is serving
+        run: |
+          url="https://${{ inputs.appName }}.azurewebsites.net/health"
+          echo "Polling $url"
+          for attempt in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
+            if [ "$code" = "200" ]; then
+              echo "Healthy after $attempt attempt(s)."
+              exit 0
+            fi
+            echo "attempt $attempt: HTTP $code"
+            sleep 10
+          done
+          echo "Health check never returned 200; the previous revision may still be live."
+          exit 1
