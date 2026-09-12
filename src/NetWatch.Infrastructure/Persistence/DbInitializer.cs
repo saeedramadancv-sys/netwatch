@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -32,7 +32,11 @@ public class DbInitializer(
             return;
         }
 
-        logger.LogInformation("Applying {Count} pending migration(s): {Migrations}", pending.Length, string.Join(", ", pending));
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            // string.Join allocates whether or not anything is listening.
+            logger.LogInformation("Applying {Count} pending migration(s): {Migrations}", pending.Length, string.Join(", ", pending));
+        }
         await context.Database.MigrateAsync(cancellationToken);
     }
 
@@ -58,7 +62,10 @@ public class DbInitializer(
                 throw new InvalidOperationException($"Could not create role '{role}': {Describe(result)}");
             }
 
-            logger.LogInformation("Created role {Role}.", role);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Created role {Role}.", role);
+            }
         }
     }
 
@@ -98,7 +105,10 @@ public class DbInitializer(
         }
 
         await userManager.AddToRoleAsync(admin, AppRoles.Admin);
-        logger.LogInformation("Created administrator {Email}.", email);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Created administrator {Email}.", email);
+        }
     }
 
     private async Task SeedSampleDevicesAsync(CancellationToken cancellationToken)
@@ -123,7 +133,10 @@ public class DbInitializer(
         context.Devices.AddRange(dns, web, gateway);
         await context.SaveChangesAsync(cancellationToken);
 
-        logger.LogInformation("Seeded {Count} sample devices.", 3);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Seeded {Count} sample devices.", 3);
+        }
     }
 
     private static string Describe(IdentityResult result) =>

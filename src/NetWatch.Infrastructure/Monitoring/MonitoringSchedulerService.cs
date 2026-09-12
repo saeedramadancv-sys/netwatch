@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -42,9 +42,13 @@ public class MonitoringSchedulerService(
         }
 
         var tick = TimeSpan.FromSeconds(Math.Max(1, _options.TickSeconds));
-        logger.LogInformation(
-            "Monitoring scheduler started: tick {Tick}s, max {MaxConcurrent} concurrent checks.",
-            tick.TotalSeconds, _options.MaxConcurrentChecks);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Monitoring scheduler started: tick {Tick}s, max {MaxConcurrent} concurrent checks.",
+                tick.TotalSeconds, _options.MaxConcurrentChecks);
+        }
 
         using var timer = new PeriodicTimer(tick);
         using var throttle = new SemaphoreSlim(Math.Max(1, _options.MaxConcurrentChecks));
