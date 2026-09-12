@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -70,7 +70,7 @@ public class ResultRetentionService(
                 }
             }
 
-            if (total > 0)
+            if (total > 0 && logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation("Retention removed {Count} check results older than {Cutoff:u}.", total, cutoff);
             }
