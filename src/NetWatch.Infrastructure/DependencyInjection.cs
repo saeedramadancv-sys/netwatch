@@ -5,7 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NetWatch.Application.Common.Interfaces;
+using NetWatch.Application.Dashboard;
 using NetWatch.Application.Monitoring;
+using NetWatch.Infrastructure.Caching;
 using NetWatch.Infrastructure.Identity;
 using NetWatch.Infrastructure.Monitoring;
 using NetWatch.Infrastructure.Persistence;
@@ -32,6 +34,7 @@ public static class DependencyInjection
 
         services.Configure<DatabaseOptions>(configuration.GetSection(DatabaseOptions.SectionName));
         services.Configure<MonitoringOptions>(configuration.GetSection(MonitoringOptions.SectionName));
+        services.Configure<CacheOptions>(configuration.GetSection(CacheOptions.SectionName));
 
         // ValidateOnStart turns a missing or too-short signing key into a startup failure
         // instead of a 500 on the first login attempt in production.
@@ -43,6 +46,7 @@ public static class DependencyInjection
         AddPersistence(services);
         AddIdentity(services);
         AddProbing(services);
+        AddCaching(services, configuration);
 
         // TimeProvider instead of a hand-rolled IDateTimeProvider: it is the framework
         // abstraction since .NET 8, and tests can substitute FakeTimeProvider to drive
@@ -57,6 +61,59 @@ public static class DependencyInjection
         services.AddHostedService<ResultRetentionService>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers the distributed cache Redis backs in production.
+    ///
+    /// This is the one registration that must read configuration eagerly: choosing
+    /// between the Redis client and the in-process store decides which services enter the
+    /// container, and that cannot be deferred to resolution time. The value read is a
+    /// connection string supplied by the host at startup, not something a test layers on
+    /// afterwards, so the constraint the class comment describes does not apply.
+    /// </summary>
+    private static void AddCaching(IServiceCollection services, IConfiguration configuration)
+    {
+        var redisConnection = configuration.GetConnectionString("Redis");
+        var instanceName = configuration.GetSection(CacheOptions.SectionName)["InstanceName"] ?? "netwatch:";
+
+        if (string.IsNullOrWhiteSpace(redisConnection))
+        {
+            // No broker to install for a fresh clone or the test host. Single-instance
+            // deployments are served correctly by this too; it only stops being adequate
+            // once a second replica exists, at which point each would cache separately.
+            services.AddDistributedMemoryCache();
+        }
+        else
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnection;
+                options.InstanceName = instanceName;
+            });
+        }
+
+        services.AddSingleton<ICacheService, DistributedCacheService>();
+
+        // Decorating by re-registering the interface: the last registration wins for a
+        // single resolve, so the concrete service stays available for the decorator to
+        // wrap without rewriting the descriptor the Application layer added.
+        services.AddScoped<DashboardService>();
+        services.AddScoped<IDashboardService>(serviceProvider =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<CacheOptions>>().Value;
+            var uncached = serviceProvider.GetRequiredService<DashboardService>();
+
+            if (!options.Enabled)
+            {
+                return uncached;
+            }
+
+            return new CachedDashboardService(
+                uncached,
+                serviceProvider.GetRequiredService<ICacheService>(),
+                TimeSpan.FromSeconds(Math.Clamp(options.DashboardSeconds, 1, 300)));
+        });
     }
 
     private static void AddPersistence(IServiceCollection services)
