@@ -6,6 +6,7 @@ using NetWatch.Api.Hubs;
 using NetWatch.Api.Middleware;
 using NetWatch.Application;
 using NetWatch.Application.Common.Interfaces;
+using NetWatch.Application.Monitoring;
 using NetWatch.Infrastructure;
 using NetWatch.Infrastructure.Persistence;
 using Serilog;
@@ -32,7 +33,15 @@ builder.Services
         options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-builder.Services.AddScoped<IMonitoringNotifier, SignalRMonitoringNotifier>();
+// The notifier is wrapped so that a state change retires the cached dashboard summary
+// before the same event reaches connected clients over SignalR. A client told a probe
+// went down would otherwise be able to refetch the summary and read the previous state
+// back out of the cache.
+builder.Services.AddScoped<SignalRMonitoringNotifier>();
+builder.Services.AddScoped<IMonitoringNotifier>(serviceProvider =>
+    new CacheInvalidatingMonitoringNotifier(
+        serviceProvider.GetRequiredService<SignalRMonitoringNotifier>(),
+        serviceProvider.GetRequiredService<ICacheService>()));
 
 builder.Services.AddJwtAuthentication();
 builder.Services.AddSpaCors();
