@@ -13,7 +13,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: "9.0.x"
+  # The SDK version lives in global.json, not here. "9.0.x" floated to whichever SDK
+  # was newest on the runner, so a new analyzer rule shipping in a patch release could
+  # - and did - turn a green build red with no change to this repository.
   NODE_VERSION: "22"
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -29,7 +31,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          global-json-file: global.json
 
       - name: Restore
         run: dotnet restore NetWatch.sln
@@ -66,7 +68,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          global-json-file: global.json
 
       - name: Install EF tools
         run: dotnet tool install --global dotnet-ef --version 9.0.0
