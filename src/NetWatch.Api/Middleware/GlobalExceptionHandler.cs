@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using NetWatch.Application.Common.Exceptions;
@@ -31,8 +31,10 @@ public class GlobalExceptionHandler(IProblemDetailsService problemDetailsService
         {
             logger.LogError(exception, "Unhandled exception on {Method} {Path}.", httpContext.Request.Method, httpContext.Request.Path);
         }
-        else
+        else if (logger.IsEnabled(LogLevel.Information))
         {
+            // PathString and the nullable status code both box. This runs on every
+            // rejected request, which under a bad client can be most of them.
             logger.LogInformation(
                 "Request to {Method} {Path} rejected with {Status}: {Detail}",
                 httpContext.Request.Method, httpContext.Request.Path, problem.Status, problem.Detail);
