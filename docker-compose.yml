@@ -24,6 +24,20 @@ services:
       retries: 10
       start_period: 30s
 
+  cache:
+    image: redis:7-alpine
+    # Only rebuildable query results live here, so evicting the coldest key under
+    # pressure beats refusing writes. No volume: nothing in this cache is worth
+    # surviving a restart.
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   api:
     build:
       context: .
@@ -31,11 +45,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      cache:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
 
       Database__Provider: SqlServer
       ConnectionStrings__Default: "Server=db,1433;Database=NetWatch;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__Redis: "cache:6379,abortConnect=False"
 
       # No default is provided for either secret. The application refuses to start
       # without a signing key, which is the intended behaviour: a committed default
