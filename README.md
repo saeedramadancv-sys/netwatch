@@ -8,7 +8,7 @@ probes (ICMP ping, TCP connect, HTTP), and watch live health, latency charts, up
 statistics and incident history on a real-time dashboard — in English or Arabic.
 
 **Stack:** ASP.NET Core 9 Web API · EF Core 9 (SQLite / SQL Server) · ASP.NET Core
-Identity + JWT · SignalR · Angular 19 · xUnit (114 tests) · Karma (19 tests) · Docker ·
+Identity + JWT · SignalR · Angular 19 · xUnit (125 tests) · Karma (19 tests) · Docker ·
 GitHub Actions
 
 ---
