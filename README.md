@@ -1,14 +1,25 @@
 # NetWatch — Network & Service Availability Monitoring
 
-**Live demo:** https://netwatch-rbmr.onrender.com — free tier, so the first visit
-after idle takes ~30s to wake. Ask for credentials, or run it locally in two commands.
+[![CI](https://github.com/saeedramadancv-sys/netwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/saeedramadancv-sys/netwatch/actions/workflows/ci.yml)
+
+**Live demo:** https://netwatch-rbmr.onrender.com (Render free tier: the first visit after
+idle can take up to a minute to wake). Sign-in is required. For a demo login, message me on
+[LinkedIn](https://www.linkedin.com/in/saeedramadan-dotnet/), or [run it locally](#run-it-locally).
+
+![NetWatch dashboard](docs/screenshots/dashboard.png)
+
+| Probe detail: uptime and response time | Arabic (RTL) |
+|---|---|
+| ![Probe detail](docs/screenshots/probe-detail.png) | ![Arabic dashboard](docs/screenshots/dashboard-ar.png) |
+
+*Screenshots from a local run with the seeded sample devices.*
 
 A self-hosted monitoring system: register devices (routers, servers, websites), attach
 probes (ICMP ping, TCP connect, HTTP), and watch live health, latency charts, uptime
 statistics and incident history on a real-time dashboard — in English or Arabic.
 
 **Stack:** ASP.NET Core 9 Web API · EF Core 9 (SQLite / SQL Server) · ASP.NET Core
-Identity + JWT · SignalR · Angular 19 · xUnit (125 tests) · Karma (19 tests) · Docker ·
+Identity + JWT · SignalR · Redis · Serilog · Angular 19 · xUnit (125 tests) · Karma (19 tests) · Docker ·
 GitHub Actions
 
 ---
