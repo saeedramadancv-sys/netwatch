@@ -96,7 +96,7 @@ npm start
 ```
 
 Open http://localhost:4200 and sign in with the development seed account
-`admin@netwatch.local` / `NetWatch#Dev1` (Development only — production refuses to seed
+`admin@netwatch.local` / `NetWatch#2026` (Development only — production refuses to seed
 an admin without an explicit password). Swagger lives at http://localhost:5080/swagger.
 
 Three sample devices are seeded so the dashboard shows live data immediately.
