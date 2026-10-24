@@ -13,11 +13,11 @@
 #   refuses to create an admin without Seed__AdminPassword, so forgetting them
 #   fails loudly instead of deploying something open.
 #
-# - ICMP probes cannot work here (containers get no NET_RAW capability), and the
-#   seeded "Default Gateway" device points at a LAN that does not exist in the
-#   cloud. Both degrade gracefully — the executor reports "ICMP is not permitted"
-#   and the dashboard shows the failure honestly. Delete those seeded probes after
-#   the first boot and monitor public targets with TCP/HTTP probes instead.
+# - ICMP probes cannot work here (containers get no NET_RAW capability), and a LAN
+#   gateway does not exist in the cloud. Seed__CloudSafeSamples makes the seeder
+#   create only TCP/HTTP probes against public targets, so the demo dashboard does
+#   not open on an incident that can never resolve. ICMP probes you add yourself
+#   still degrade gracefully: the executor reports "ICMP is not permitted".
 services:
   - type: web
     name: netwatch
@@ -45,6 +45,9 @@ services:
       # upper, lower and a digit.
       - key: Seed__AdminPassword
         sync: false
+
+      - key: Seed__CloudSafeSamples
+        value: "true"
 
       # Gentler than the local defaults: this is a shared free instance, and a
       # sleeping service that wakes into a burst of overdue checks should ramp up
