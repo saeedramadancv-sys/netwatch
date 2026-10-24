@@ -1,59 +1,23 @@
-# NetwatchWeb
+# NetWatch web client
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.27.
+The Angular 19 front end for NetWatch: dashboard, devices, probes and incidents, in
+English or Arabic (RTL), with live updates over SignalR.
 
-## Development server
+See the [main README](../../README.md) for the full project.
 
-To start a local development server, run:
+## Run it
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Start the API first (it listens on http://localhost:5080, see
+`src/environments/environment.development.ts`), then:
 
 ```bash
-ng generate component component-name
+npm install
+npm start        # http://localhost:4200
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Test and build
 
 ```bash
-ng generate --help
+npm test         # Karma unit tests (19)
+npm run build    # production build into dist/
 ```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
