@@ -93,7 +93,7 @@ Three sample devices are seeded so the dashboard shows live data immediately.
 ### Tests
 
 ```bash
-dotnet test                                    # 114 backend tests
+dotnet test                                    # 125 backend tests (xUnit)
 cd client/netwatch-web && npm test             # 19 client tests
 ```
 
@@ -127,7 +127,11 @@ ConnectionStrings__Redis="localhost:6379"
 is served correctly by the in-process fallback; it only stops being adequate once a
 second replica exists, at which point each would cache separately.
 
-## Deploy to Azure
+## Deploy to Azure (template, not yet deployed)
+
+The live demo runs on Render (`render.yaml`). The Bicep template and the
+`Deploy to Azure` workflow below are written but have not yet been run against an
+Azure subscription.
 
 `infra/main.bicep` provisions App Service (Linux container), Azure Cache for Redis and
 Azure SQL, and wires the connection strings into the app settings. The
