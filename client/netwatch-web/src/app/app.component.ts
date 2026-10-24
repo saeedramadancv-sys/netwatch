@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { I18nService } from './core/i18n/i18n.service';
 import { TranslatePipe } from './core/i18n/translate.pipe';
@@ -172,6 +172,18 @@ export class AppComponent {
   readonly auth = inject(AuthService);
   readonly hub = inject(MonitoringHubService);
   readonly i18n = inject(I18nService);
+
+  constructor() {
+    // The live indicator sits in the shell, so the connection belongs to the shell too.
+    // Started only by the dashboard, a page opened directly by URL (a probe's detail,
+    // say) showed "Offline" for a session that was signed in and healthy.
+    effect(() => {
+      const signedIn = this.auth.isAuthenticated();
+      // untracked: start() reads the token and sets the status signal, and neither
+      // should make this effect re-run; only signing in or out should.
+      untracked(() => void (signedIn ? this.hub.start() : this.hub.stop()));
+    });
+  }
 
   readonly liveLabel = computed(() => {
     switch (this.hub.status()) {
