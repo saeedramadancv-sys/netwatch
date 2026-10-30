@@ -7,6 +7,9 @@ namespace NetWatch.Infrastructure.Identity;
 /// </summary>
 public static class AppRoles
 {
+    /// <summary>The read-only account behind the public demo button.</summary>
+    public const string DemoViewerEmail = "demo@netwatch.local";
+
     /// <summary>Full control, including user management and deleting devices.</summary>
     public const string Admin = "Admin";
 

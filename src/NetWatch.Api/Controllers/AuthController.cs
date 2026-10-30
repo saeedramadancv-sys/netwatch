@@ -10,8 +10,34 @@ namespace NetWatch.Api.Controllers;
 [ApiController]
 [Route("api/auth")]
 [Produces("application/json")]
-public class AuthController(IAuthService auth) : ControllerBase
+public class AuthController(IAuthService auth, IConfiguration configuration) : ControllerBase
 {
+    /// <summary>Tells the sign-in page whether to offer the demo button.</summary>
+    [HttpGet("demo")]
+    [AllowAnonymous]
+    [ProducesResponseType<DemoStatus>(StatusCodes.Status200OK)]
+    public ActionResult<DemoStatus> DemoAvailable() => Ok(new DemoStatus(DemoEnabled));
+
+    /// <summary>
+    /// Signs in as a read-only viewer without credentials, so someone reviewing the live
+    /// demo can look around without asking for an account. Off unless Demo:Enabled is set.
+    /// </summary>
+    [HttpPost("demo")]
+    [AllowAnonymous]
+    [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AuthResponse>> Demo(CancellationToken cancellationToken)
+    {
+        if (!DemoEnabled)
+        {
+            return NotFound();
+        }
+
+        return Ok(await auth.DemoLoginAsync(ClientIp(), cancellationToken));
+    }
+
+    private bool DemoEnabled => configuration.GetValue("Demo:Enabled", false);
+
     /// <summary>Exchanges credentials for an access token and a refresh token.</summary>
     [HttpPost("login")]
     [AllowAnonymous]
@@ -78,3 +104,6 @@ public class AuthController(IAuthService auth) : ControllerBase
     /// </summary>
     private string? ClientIp() => HttpContext.Connection.RemoteIpAddress?.ToString();
 }
+
+/// <summary>Whether this deployment offers the public read-only demo.</summary>
+public sealed record DemoStatus(bool Enabled);

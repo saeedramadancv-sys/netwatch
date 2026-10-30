@@ -45,6 +45,17 @@ export class AuthService {
       .pipe(tap((response) => this.store(response)));
   }
 
+  /** Whether this deployment offers the read-only demo button. */
+  demoAvailable(): Observable<{ enabled: boolean }> {
+    return this.http.get<{ enabled: boolean }>(`${environment.apiBaseUrl}/api/auth/demo`);
+  }
+
+  demoLogin(): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${environment.apiBaseUrl}/api/auth/demo`, {})
+      .pipe(tap((response) => this.store(response)));
+  }
+
   /**
    * Exchanges the refresh token for a new pair. The server rotates on every call,
    * so the stored refresh token must be replaced with the one returned here or the

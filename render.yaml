@@ -49,6 +49,11 @@ services:
       - key: Seed__CloudSafeSamples
         value: "true"
 
+      # Adds a button on the sign-in page that opens a read-only session. It uses the
+      # Viewer role, so visitors can look at everything and change nothing.
+      - key: Demo__Enabled
+        value: "true"
+
       # Gentler than the local defaults: this is a shared free instance, and a
       # sleeping service that wakes into a burst of overdue checks should ramp up
       # quietly.

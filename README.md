@@ -3,8 +3,8 @@
 [![CI](https://github.com/saeedramadancv-sys/netwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/saeedramadancv-sys/netwatch/actions/workflows/ci.yml)
 
 **Live demo:** https://netwatch-rbmr.onrender.com (Render free tier: the first visit after
-idle can take up to a minute to wake). Sign-in is required. For a demo login, message me on
-[LinkedIn](https://www.linkedin.com/in/saeedramadan-dotnet/), or [run it locally](#run-it-locally).
+idle can take up to a minute to wake). Press **Try the demo** on the sign-in page for read-only
+access, no account needed, or [run it locally](#run-it-locally).
 
 ![NetWatch dashboard](docs/screenshots/dashboard.png)
 
@@ -19,7 +19,7 @@ attach probes to them (ICMP ping, TCP connect or HTTP), and watch their health, 
 times, uptime and incidents on a dashboard that updates live. It works in English and Arabic.
 
 **Stack:** ASP.NET Core 9 Web API · EF Core 9 (SQLite / SQL Server) · ASP.NET Core
-Identity + JWT · SignalR · Redis · Serilog · Angular 19 · xUnit (125 tests) · Karma (19 tests) · Docker ·
+Identity + JWT · SignalR · Redis · Serilog · Angular 19 · xUnit (128 tests) · Karma (19 tests) · Docker ·
 GitHub Actions
 
 ---
@@ -103,7 +103,7 @@ Three sample devices are seeded, so the dashboard has live data straight away.
 ### Tests
 
 ```bash
-dotnet test                                    # 125 backend tests (xUnit)
+dotnet test                                    # 128 backend tests (xUnit)
 cd client/netwatch-web && npm test             # 19 client tests
 ```
 

@@ -50,6 +50,13 @@ import { AuthService } from '../../core/services/auth.service';
           }
         </button>
 
+        @if (demoAvailable()) {
+          <button class="btn demo" type="button" [disabled]="busy()" (click)="tryDemo()">
+            {{ 'login.demo' | translate }}
+          </button>
+          <p class="muted demo-note">{{ 'login.demoNote' | translate }}</p>
+        }
+
         <button class="btn btn-sm lang" type="button" (click)="i18n.toggle()">
           {{ i18n.language() === 'en' ? 'العربية' : 'English' }}
         </button>
@@ -85,6 +92,18 @@ import { AuthService } from '../../core/services/auth.service';
       margin-top: 4px;
     }
 
+    .demo {
+      width: 100%;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .demo-note {
+      margin: 6px 0 0;
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
     .lang {
       display: block;
       margin: 14px auto 0;
@@ -104,11 +123,33 @@ export class LoginComponent {
 
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  readonly demoAvailable = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+
+  constructor() {
+    // If this check fails the page simply stays a normal sign-in form.
+    this.auth.demoAvailable().subscribe({
+      next: (status) => this.demoAvailable.set(status.enabled),
+      error: () => undefined,
+    });
+  }
+
+  tryDemo(): void {
+    this.busy.set(true);
+    this.error.set(null);
+
+    this.auth.demoLogin().subscribe({
+      next: () => void this.router.navigateByUrl('/dashboard'),
+      error: () => {
+        this.busy.set(false);
+        this.error.set(this.i18n.translate('login.unavailable'));
+      },
+    });
+  }
 
   submit(): void {
     if (this.form.invalid) {

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System.Security.Cryptography;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -44,6 +45,7 @@ public class DbInitializer(
     {
         await SeedRolesAsync();
         await SeedAdministratorAsync();
+        await SeedDemoViewerAsync();
         await SeedSampleDevicesAsync(cancellationToken);
     }
 
@@ -109,6 +111,37 @@ public class DbInitializer(
         {
             logger.LogInformation("Created administrator {Email}.", email);
         }
+    }
+
+    private async Task SeedDemoViewerAsync()
+    {
+        if (!configuration.GetValue("Demo:Enabled", false)
+            || await userManager.FindByEmailAsync(AppRoles.DemoViewerEmail) is not null)
+        {
+            return;
+        }
+
+        var viewer = new ApplicationUser
+        {
+            UserName = AppRoles.DemoViewerEmail,
+            Email = AppRoles.DemoViewerEmail,
+            EmailConfirmed = true,
+            FullName = "Demo Viewer",
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        // Nobody ever types this password: the demo endpoint signs in without one. It is
+        // random so that the account has no credential that could be published or guessed.
+        var password = $"{Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))}aA1!";
+
+        var created = await userManager.CreateAsync(viewer, password);
+        if (!created.Succeeded)
+        {
+            throw new InvalidOperationException($"Could not create the demo account: {Describe(created)}");
+        }
+
+        await userManager.AddToRoleAsync(viewer, AppRoles.Viewer);
+        logger.LogInformation("Created the read-only demo account.");
     }
 
     private async Task SeedSampleDevicesAsync(CancellationToken cancellationToken)

@@ -51,6 +51,19 @@ public class AuthService(
         return await IssueAsync(user, ipAddress, cancellationToken);
     }
 
+    public async Task<AuthResponse> DemoLoginAsync(string? ipAddress, CancellationToken cancellationToken = default)
+    {
+        // The role is checked here as well as at seeding, so that a demo account which was
+        // ever given more rights fails closed instead of handing them to anonymous visitors.
+        var user = await userManager.FindByEmailAsync(AppRoles.DemoViewerEmail);
+        if (user is null || !(await userManager.GetRolesAsync(user)).SequenceEqual([AppRoles.Viewer]))
+        {
+            throw new NotFoundException("Demo account", AppRoles.DemoViewerEmail);
+        }
+
+        return await IssueAsync(user, ipAddress, cancellationToken);
+    }
+
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, string? ipAddress, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);

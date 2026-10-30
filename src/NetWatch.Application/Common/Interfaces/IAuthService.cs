@@ -12,6 +12,9 @@ public interface IAuthService
 
     Task<AuthResponse> RegisterAsync(RegisterRequest request, string? ipAddress, CancellationToken cancellationToken = default);
 
+    /// <summary>Signs in as the read-only demo account. Fails if the demo is not switched on.</summary>
+    Task<AuthResponse> DemoLoginAsync(string? ipAddress, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Exchanges a valid refresh token for a new pair, rotating the old one.
     /// </summary>
